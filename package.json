@@ -9,7 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "aws-amplify": "^6.0.19",
+    "@aws-sdk/client-bedrock-runtime": "^3.529.1",
+    "aws-amplify": "^5.3.7-v5-auth-internals.9bf4dba.6",
     "next": "14.0.0",
     "react": "^18",
     "react-dom": "^18"

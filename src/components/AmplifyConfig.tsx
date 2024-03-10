@@ -1,7 +1,7 @@
 import { Amplify } from 'aws-amplify'
 import awsconfig from '../aws-exports';
 
-Amplify.configure({}, {
+Amplify.configure({
   ...awsconfig,
   ssr: true
 });
