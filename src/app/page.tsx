@@ -1,7 +1,11 @@
+import { AmplifyConfig } from "@/components/AmplifyConfig";
+
 export default function Home() {
   return (
-    <main>
-      テスト
-    </main>
+    <AmplifyConfig>
+      <main>
+        テスト
+      </main>
+    </AmplifyConfig>
   )
 }
