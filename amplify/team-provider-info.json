@@ -10,6 +10,11 @@
       "StackName": "amplify-bedrocksample-dev-91824",
       "StackId": "arn:aws:cloudformation:ap-northeast-1:042313712092:stack/amplify-bedrocksample-dev-91824/b65149d0-de73-11ee-a64d-0e6f5d2f86e1",
       "AmplifyAppId": "dg3hdr5xk9e67"
+    },
+    "categories": {
+      "auth": {
+        "bedrocksample598eead7": {}
+      }
     }
   }
 }

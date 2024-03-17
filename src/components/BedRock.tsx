@@ -1,20 +1,29 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { withSSRContext } from 'aws-amplify';
 
+import { Amplify } from 'aws-amplify'
+import awsconfig from '../aws-exports';
+
+Amplify.configure({
+  ...awsconfig,
+  ssr: true
+});
+
 export const BedRock = async () => {
-  const SSR = withSSRContext();
-  const credentials = await SSR.Auth.currentCredentials();
   const bedrock = new BedrockRuntimeClient({
-    serviceId: 'bedrock',
-    region: "ap-northeast-1",
-    credentials
+    region: 'us-east-1',
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
+    }
   });
+
   const prompt = `Human:${"大谷翔平について教えて"}\n\nAssistant:`;
   const result = await bedrock.send(
     new InvokeModelCommand({
-      modelId: 'anthropic.claude-v2',
+      modelId: 'anthropic.claude-v2:1',
       contentType: 'application/json',
-      accept: '*/*',
+      accept: 'application/json',
       body: JSON.stringify({
         prompt,
         // LLM costs are measured by Tokens, which are roughly equivalent
@@ -31,12 +40,11 @@ export const BedRock = async () => {
         // generally have a chat-like string of Human and Assistant message
         // This says stop when the Assistant (Claude) is done and expects
         // the human to respond
-        stop_sequences: ['\n\nHuman:'],
-        anthropic_version: 'bedrock-2023-05-31'
+        stop_sequences: ['\n\nHuman:']
       })
     })
   );
-  console.log(result);
+  console.log(JSON.parse(new TextDecoder().decode(result.body)));
   return (
     <></>
   )
