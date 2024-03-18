@@ -1,19 +1,24 @@
 "use client"
 
 import { postMessageWithStream } from "@/lib/bedrock"
-import { useState } from "react"
+import { getNow } from "@/utils"
+import { useState, useTransition } from "react"
 
 export default function Home() {
+  const [isPending, startTransition] = useTransition()
   const [prompt, setPrompt] = useState("")
+  const [userChat, setUserChat] = useState("")
   const [botChat, setBotChat] = useState("")
 
   const onSend = async (e: any) => {
     e.preventDefault()
-    const prompt = e.target[0].value
-    setPrompt(prompt)
-    
-    await postMessageWithStream(prompt, (data) => {
-      setBotChat(prev => prev + data)
+    const _prompt = e.target[0].value
+    setUserChat(_prompt)
+    setPrompt("")
+    startTransition(async () => {
+      await postMessageWithStream(_prompt, (data) => {
+        setBotChat(prev => prev + data)
+      })
     })
   }
 
@@ -25,14 +30,15 @@ export default function Home() {
         </header>
         <main className="flex-1 flex flex-col p-4">
           <div className="grid gap-4">
-            {prompt &&
+            {userChat &&
               <div className="flex flex-col items-end gap-1">
                 <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
                   <div className="flex items-center gap-2 text-sm">
-                    <div className="font-medium">You</div>
-                    <time className="opacity-70">2:26pm</time>
+                    <div className="font-medium bg-slate-500 text-white px-2 py-1 rounded-full">You</div>
+                    {/* 時間をフォーマットするコード */}
+                    <time className="opacity-70">{getNow()}</time>
                   </div>
-                  <div className="mt-2">{prompt}</div>
+                  <div className="mt-2">{userChat}</div>
                 </div>
               </div>
             }
@@ -40,13 +46,21 @@ export default function Home() {
               <div className="flex flex-col items-start gap-1">
                 <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
                   <div className="flex items-center gap-2 text-sm">
-                    <div className="font-medium">ChatGPT</div>
-                    <time className="opacity-70">2:27pm</time>
+                    <div className="font-medium bg-green-600 text-white px-2 py-1 rounded-full">Bed Rock</div>
+                    <time className="opacity-70">{getNow()}</time>
                   </div>
-                  <div className="mt-2">{botChat}</div>
+                  <div className="mt-2 whitespace-pre-wrap">{botChat}</div>
                 </div>
               </div>
             }
+            {isPending && botChat.length === 0 && <div className="flex flex-col items-start gap-1">
+              <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="font-medium">Bed Rock</div>
+                </div>
+                <div className="mt-2">考え中...</div>
+              </div>
+            </div>}
           </div>
         </main>
         <div className="border-t p-4">
@@ -55,6 +69,8 @@ export default function Home() {
               placeholder="Type a message"
               className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring focus:ring-gray-400"
               type="text"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
             />
             <button type="submit" className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors">Send</button>
           </form>
