@@ -1,8 +1,6 @@
 "use client"
 import { BedrockRuntimeClient, InvokeModelWithResponseStreamCommand } from '@aws-sdk/client-bedrock-runtime';
 
-import { Amplify } from 'aws-amplify'
-import awsconfig from '../aws-exports';
 import { useEffect, useState } from 'react';
 
 export const BedRock = () => {
