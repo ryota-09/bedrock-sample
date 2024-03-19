@@ -17,7 +17,7 @@ export const postMessageWithStream = async (prompt: string, onMessage: (completi
       accept: '*/*',
       body: JSON.stringify({
         prompt: _prompt,
-        max_tokens_to_sample: 20,
+        max_tokens_to_sample: 1000,
         temperature: 1,
         top_k: 250,
         top_p: 0.99,
@@ -58,7 +58,7 @@ export const postMessageWithMaxLength = async (payload: Payload, onMessage: (com
       accept: '*/*',
       body: JSON.stringify({
         messages,
-        max_tokens: 20,
+        max_tokens: 1000,
         anthropic_version: "bedrock-2023-05-31"
       })
     })

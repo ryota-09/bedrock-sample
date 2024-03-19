@@ -59,7 +59,6 @@ export default function Home() {
                 <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
                   <div className="flex items-center gap-2 text-sm">
                     <div className="font-medium bg-slate-500 text-white px-2 py-1 rounded-full">You</div>
-                    {/* 時間をフォーマットするコード */}
                     <time className="opacity-70">{getNow()}</time>
                   </div>
                   <div className="mt-2">{userChat}</div>
