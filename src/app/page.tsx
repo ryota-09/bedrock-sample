@@ -19,6 +19,8 @@ export default function Home() {
       await postMessageWithStream(_prompt, (data) => {
         setBotChat(prev => prev + data)
       })
+      window.history.pushState(null, "", `/chat/${Math.floor(Math.random() * 10)}`)
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
     })
   }
 

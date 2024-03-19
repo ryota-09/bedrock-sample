@@ -9,7 +9,7 @@ const bedrock = new BedrockRuntimeClient({
 });
 
 export const postMessageWithStream = async (prompt: string, onMessage: (text: string) => void) => {
-  const _prompt = `Human:${`${prompt}`}\n\nAssistant:`;
+  const _prompt = `Human:${prompt}\n\nAssistant:`;
   const response = await bedrock.send(
     new InvokeModelWithResponseStreamCommand({
       modelId: 'anthropic.claude-v2:1',
@@ -20,7 +20,7 @@ export const postMessageWithStream = async (prompt: string, onMessage: (text: st
         // LLM costs are measured by Tokens, which are roughly equivalent
         // to 1 word. This option allows you to set the maximum amount of
         // tokens to return
-        max_tokens_to_sample: 2000,
+        max_tokens_to_sample: 200,
         // Temperature (1-0) is how 'creative' the LLM should be in its response
         // 1: deterministic, prone to repeating
         // 0: creative, prone to hallucinations
