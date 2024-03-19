@@ -20,7 +20,7 @@ const data = {
   ]
 }
 
-export default function Page({ roomId }: { roomId: string }) {
+export default function Page() {
   const [isPending, startTransition] = useTransition()
   const [prompt, setPrompt] = useState("")
   const [conversation, setConversation] = useState(data.conversations)
