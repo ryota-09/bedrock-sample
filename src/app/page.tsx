@@ -1,6 +1,6 @@
 "use client"
 
-import { postMessageWithStream } from "@/lib/bedrock"
+import { postMessageWithMaxLength, postMessageWithStream } from "@/lib/bedrock"
 import { getNow } from "@/utils"
 import { useState, useTransition } from "react"
 
@@ -9,6 +9,7 @@ export default function Home() {
   const [prompt, setPrompt] = useState("")
   const [userChat, setUserChat] = useState("")
   const [botChat, setBotChat] = useState("")
+  const [stopReason, setStopReason] = useState("")
 
   const onSend = async (e: any) => {
     e.preventDefault()
@@ -16,8 +17,29 @@ export default function Home() {
     setUserChat(_prompt)
     setPrompt("")
     startTransition(async () => {
-      await postMessageWithStream(_prompt, (data) => {
-        setBotChat(prev => prev + data)
+      await postMessageWithStream(_prompt, (completion, stopReason) => {
+        setBotChat(prev => prev + completion)
+        if (stopReason === "max_tokens") {
+          setStopReason(stopReason)
+          return
+        }
+      })
+      window.history.pushState(null, "", `/chat/${Math.floor(Math.random() * 10)}`)
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+    })
+  }
+
+  const onSendWithMaxLength = async (e: any) => {
+    e.preventDefault()
+    startTransition(async () => {
+      await postMessageWithMaxLength({ userChat: userChat, botChat: botChat }, (completion, stopReason) => {
+        if(completion) {
+          setBotChat(prev => prev + completion)
+        }
+        if (stopReason === "max_tokens") {
+          setStopReason(stopReason)
+          return
+        }
       })
       window.history.pushState(null, "", `/chat/${Math.floor(Math.random() * 10)}`)
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
@@ -65,6 +87,7 @@ export default function Home() {
             </div>}
           </div>
         </main>
+        {stopReason === "max_tokens" && <button className="mx-auto hover:bg-orange-100 p-4 text-center border border-orange-300 text-orange-600 rounded-md" onClick={onSendWithMaxLength}>Continue</button>}
         <div className="border-t p-4">
           <form className="flex gap-4" onSubmit={onSend}>
             <input

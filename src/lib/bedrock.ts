@@ -8,7 +8,7 @@ const bedrock = new BedrockRuntimeClient({
   }
 });
 
-export const postMessageWithStream = async (prompt: string, onMessage: (text: string) => void) => {
+export const postMessageWithStream = async (prompt: string, onMessage: (completion: string, stopReason?: string) => void) => {
   const _prompt = `Human:${prompt}\n\nAssistant:`;
   const response = await bedrock.send(
     new InvokeModelWithResponseStreamCommand({
@@ -17,20 +17,10 @@ export const postMessageWithStream = async (prompt: string, onMessage: (text: st
       accept: '*/*',
       body: JSON.stringify({
         prompt: _prompt,
-        // LLM costs are measured by Tokens, which are roughly equivalent
-        // to 1 word. This option allows you to set the maximum amount of
-        // tokens to return
-        max_tokens_to_sample: 200,
-        // Temperature (1-0) is how 'creative' the LLM should be in its response
-        // 1: deterministic, prone to repeating
-        // 0: creative, prone to hallucinations
+        max_tokens_to_sample: 20,
         temperature: 1,
         top_k: 250,
         top_p: 0.99,
-        // This tells the model when to stop its response. LLMs
-        // generally have a chat-like string of Human and Assistant message
-        // This says stop when the Assistant (Claude) is done and expects
-        // the human to respond
         stop_sequences: ['\n\nHuman:']
       })
     })
@@ -40,8 +30,47 @@ export const postMessageWithStream = async (prompt: string, onMessage: (text: st
 
     for await (const stream of response.body) {
       const chunk = textDecoder.decode(stream.chunk?.bytes);
-      // setText((prev) => prev + JSON.parse(chunk)["completion"])
-      onMessage(JSON.parse(chunk)["completion"])
+      onMessage(JSON.parse(chunk)["completion"], JSON.parse(chunk)["stop_reason"])
+    }
+  }
+}
+
+type Payload = {
+  userChat: string
+  botChat: string
+}
+
+export const postMessageWithMaxLength = async (payload: Payload, onMessage: (completion: string, stopReason?: string) => void) => {
+  const messages = [
+    {
+      role: "user",
+      content: [{ type: "text", text: payload.userChat }]
+    }, {
+      role: "assistant",
+      content: [{ type: "text", text: payload.botChat }]
+    }
+  ];
+
+  const response = await bedrock.send(
+    new InvokeModelWithResponseStreamCommand({
+      modelId: 'anthropic.claude-v2:1',
+      contentType: 'application/json',
+      accept: '*/*',
+      body: JSON.stringify({
+        messages,
+        max_tokens: 20,
+        anthropic_version: "bedrock-2023-05-31"
+      })
+    })
+  );
+
+  if (response.body) {
+    const textDecoder = new TextDecoder("utf-8");
+    for await (const stream of response.body) {
+      const chunk = textDecoder.decode(stream.chunk?.bytes);
+      if (chunk.includes("delta")) {
+        onMessage(JSON.parse(chunk)["delta"]["text"], JSON.parse(chunk)["delta"]["stop_reason"])
+      }
     }
   }
 }
