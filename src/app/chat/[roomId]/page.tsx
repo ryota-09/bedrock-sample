@@ -4,9 +4,26 @@ import { postMessageWithMaxLength, postMessageWithStream } from "@/lib/bedrock"
 import { createChatRoomId, getNow } from "@/utils"
 import { useState, useTransition } from "react"
 
-export default function Home() {
+const data = {
+  roomId: "chat-202110191b9e3e3e-4e3d-4b3d-8e3d-4b3d8e3d4b3d",
+  conversations: [
+    {
+      role: "user",
+      message: "Hello",
+      date: "2022-01-01T00:00:00Z"
+    },
+    {
+      role: "assistant",
+      message: "Hello",
+      date: "2022-01-01T00:00:01Z"
+    }
+  ]
+}
+
+export default function Page({ roomId }: { roomId: string }) {
   const [isPending, startTransition] = useTransition()
   const [prompt, setPrompt] = useState("")
+  const [conversation, setConversation] = useState(data.conversations)
   const [userChat, setUserChat] = useState("")
   const [botChat, setBotChat] = useState("")
   const [stopReason, setStopReason] = useState("")
@@ -14,18 +31,23 @@ export default function Home() {
   const onSend = async (e: any) => {
     e.preventDefault()
     const _prompt = e.target[0].value
-    setUserChat(_prompt)
+    setConversation(prev => [...prev, { role: "user", message: _prompt, date: getNow() }])
     setPrompt("")
+    let text = ""
     startTransition(async () => {
       await postMessageWithStream(_prompt, (completion, stopReason) => {
+        text += botChat + completion
         setBotChat(prev => prev + completion)
         if (stopReason === "max_tokens") {
           setStopReason(stopReason)
           return
         }
+        if(stopReason === "stop_sequence") {
+          setBotChat("")
+          setConversation(prev => [...prev, { role: "assistant", message: text, date: getNow() }])
+          return
+        }
       })
-      window.history.pushState(null, "", `/chat/${createChatRoomId()}}`)
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
     })
   }
 
@@ -33,7 +55,7 @@ export default function Home() {
     e.preventDefault()
     startTransition(async () => {
       await postMessageWithMaxLength({ userChat: userChat, botChat: botChat }, (completion, stopReason) => {
-        if(completion) {
+        if (completion) {
           setBotChat(prev => prev + completion)
         }
         if (stopReason === "max_tokens") {
@@ -52,17 +74,28 @@ export default function Home() {
         </header>
         <main className="flex-1 flex flex-col p-4">
           <div className="grid gap-4">
-            {userChat &&
-              <div className="flex flex-col items-end gap-1">
-                <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="font-medium bg-slate-500 text-white px-2 py-1 rounded-full">You</div>
-                    <time className="opacity-70">{getNow()}</time>
+            {conversation.map((chat, index) => (
+              chat.role === "user" ?
+                <div key={index} className="flex flex-col items-end gap-1">
+                  <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="font-medium bg-slate-500 text-white px-2 py-1 rounded-full">You</div>
+                      <time className="opacity-70">{chat.date}</time>
+                    </div>
+                    <div className="mt-2">{chat.message}</div>
                   </div>
-                  <div className="mt-2">{userChat}</div>
                 </div>
-              </div>
-            }
+                :
+                <div className="flex flex-col items-start gap-1" key={index}>
+                  <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="font-medium bg-green-600 text-white px-2 py-1 rounded-full">Bed Rock</div>
+                      <time className="opacity-70">{chat.date}</time>
+                    </div>
+                    <div className="mt-2 whitespace-pre-wrap">{chat.message}</div>
+                  </div>
+                </div>
+            ))}
             {botChat &&
               <div className="flex flex-col items-start gap-1">
                 <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
