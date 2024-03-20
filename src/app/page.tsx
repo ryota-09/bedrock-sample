@@ -39,6 +39,7 @@ export default function Home() {
             }
 
             if (value) {
+              console.log(decoder.decode(value, { stream: true }))
               const chunk = JSON.parse(decoder.decode(value, { stream: true }))
               const chunk_type = chunk.type;
               switch (chunk_type) {
