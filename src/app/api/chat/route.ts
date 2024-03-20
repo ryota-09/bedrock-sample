@@ -4,9 +4,8 @@ export const runtime = 'edge'
 
 export async function POST(request: Request) {
   const data = await request.json()
-  console.log("handler")
   const readableStream = new ReadableStream({
-    async start(controller) {
+    async pull(controller) {
       const response = await postMessageWithRiouteHandler(data.prompt)
       if (response.body) {
         for await (const stream of response.body) {
@@ -16,7 +15,7 @@ export async function POST(request: Request) {
       }
     }
   })
-  return new Response(readableStream, { headers: { "Content-Type": "text/plain" } })
+  return new Response(readableStream, { headers: { "Content-Type": "text/event-stream" } })
 }
 
 export async function GET() {
