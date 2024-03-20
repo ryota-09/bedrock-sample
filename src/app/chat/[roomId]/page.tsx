@@ -56,11 +56,10 @@ export default function Page() {
         },
         "body": JSON.stringify({ "prompt": _prompt })
       })
-      let text = ""
       if (response.body) {
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
-
+        let text = ""
         try {
           while (true) {
             const { done, value } = await reader.read()
@@ -71,8 +70,9 @@ export default function Page() {
 
             if (value) {
               let chunk
+              console.log("@@@@@@@@@@")
+              console.log(decoder.decode(value, { stream: true }).replaceAll(/}\s*{/g, '},{'))
               chunk = JSON.parse(decoder.decode(value, { stream: true }).replaceAll(/}\s*{/g, '},{'))
-              console.log(chunk)
               const chunk_type = chunk.type;
               switch (chunk_type) {
                 // case "message_start":
