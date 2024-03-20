@@ -74,7 +74,7 @@ export default function Page() {
               try {
                 chunk = JSON.parse(decoder.decode(value, { stream: true }))
               } catch {
-                chunk = JSON.parse('[' + decoder.decode(value, { stream: true }).replace(/}\s*{/g, '},{') + ']')
+                chunk = JSON.parse(decoder.decode(value, { stream: true }).replace(/}\s*{/g, '},{'))
               }
               console.log(chunk)
               const chunk_type = chunk.type;
