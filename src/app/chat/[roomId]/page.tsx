@@ -48,7 +48,6 @@ export default function Page() {
     const _prompt = e.target[0].value
     setConversation(prev => [...prev, { role: "user", message: _prompt, date: getNow() }])
     setPrompt("")
-
     startTransition(async () => {
       const response = await fetch(`/api/chat`, {
         "method": "POST",
@@ -72,6 +71,7 @@ export default function Page() {
 
             if (value) {
               const chunk = JSON.parse(decoder.decode(value, { stream: true }))
+              console.log(chunk)
               const chunk_type = chunk.type;
               switch (chunk_type) {
                 // case "message_start":
