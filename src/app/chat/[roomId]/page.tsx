@@ -70,7 +70,12 @@ export default function Page() {
             }
 
             if (value) {
-              const chunk = JSON.parse(decoder.decode(value, { stream: true }))
+              let chunk
+              try {
+                chunk = JSON.parse(decoder.decode(value, { stream: true }))
+              } catch {
+                chunk = JSON.parse('[' + decoder.decode(value, { stream: true }).replace(/}\s*{/g, '},{') + ']')
+              }
               console.log(chunk)
               const chunk_type = chunk.type;
               switch (chunk_type) {
