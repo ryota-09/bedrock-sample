@@ -28,29 +28,6 @@ export default function Page() {
   const [botChat, setBotChat] = useState("")
   const [stopReason, setStopReason] = useState("")
 
-  const onSend = async (e: any) => {
-    e.preventDefault()
-    const _prompt = e.target[0].value
-    setConversation(prev => [...prev, { role: "user", message: _prompt, date: getNow() }])
-    setPrompt("")
-    let text = ""
-    startTransition(async () => {
-      await postMessageWithStream(_prompt, (completion, stopReason) => {
-        text += botChat + completion
-        setBotChat(prev => prev + completion)
-        if (stopReason === "max_tokens") {
-          setStopReason(stopReason)
-          return
-        }
-        if (stopReason === "stop_sequence") {
-          setBotChat("")
-          setConversation(prev => [...prev, { role: "assistant", message: text, date: getNow() }])
-          return
-        }
-      })
-    })
-  }
-
   const onSendWithMaxLength = async (e: any) => {
     e.preventDefault()
     startTransition(async () => {
@@ -66,62 +43,78 @@ export default function Page() {
     })
   }
 
-  const onButtonClick = async (prompt: string) => {
-    const response = await fetch(`/api/stream`, {
-      "method": "POST",
-      "headers": {
-        "Content-Type": "application/json"
-      },
-      "body": JSON.stringify({ "prompt": prompt })
-    })
+  const onSend = async (e: any) => {
+    e.preventDefault()
+    const _prompt = e.target[0].value
+    setConversation(prev => [...prev, { role: "user", message: _prompt, date: getNow() }])
+    setPrompt("")
 
-    if (response.body) {
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
+    startTransition(async () => {
+      const response = await fetch(`/api/chat`, {
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": JSON.stringify({ "prompt": _prompt })
+      })
+      let text = ""
+      if (response.body) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
 
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
 
-          if (done) {
-            break
-          }
+            if (done) {
+              break
+            }
 
-          if (value) {
-            const chunk = JSON.parse(decoder.decode(value, { stream: true }))
-            const chunk_type = chunk.type;
-            switch (chunk_type) {
-              case "message_start":
-                console.log(chunk);
-                console.log(chunk["message"]["id"]);
-                console.log(chunk["message"]["model"]);
-                break;
-              case "content_block_delta":
-                setBotChat(prev => prev + chunk["delta"]["text"])
-                break;
-              case "message_stop":
-                const metrics = chunk["amazon-bedrock-invocationMetrics"];
-                console.log(`\nNumber of input tokens: ${metrics.inputTokenCount}`);
-                console.log(`Number of output tokens: ${metrics.outputTokenCount}`);
-                console.log(`Invocation latency: ${metrics.invocationLatency}`);
-                console.log(`First byte latency: ${metrics.firstByteLatency}`);
-                break;
-              default:
-                console.log(chunk);
+            if (value) {
+              const chunk = JSON.parse(decoder.decode(value, { stream: true }))
+              const chunk_type = chunk.type;
+              switch (chunk_type) {
+                // case "message_start":
+                //   console.log(chunk);
+                //   console.log(chunk["message"]["id"]);
+                //   console.log(chunk["message"]["model"]);
+                //   break;
+                case "content_block_delta":
+                  const currentText = chunk["delta"]["text"]
+                  text = text + currentText
+                  setBotChat(prev => prev + currentText)
+                  if (chunk["delta"]["stop_reason"] === "max_tokens") {
+                    setStopReason("max_tokens")
+                    return
+                  }
+                  break;
+                // case "message_delta":
+                //   if (chunk["delta"]["stop_reason"] === "end_turn") {
+                //     return
+                //   }
+                //   break;
+                case "message_stop":
+                  // const metrics = chunk["amazon-bedrock-invocationMetrics"];
+                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+                  break;
+                default:
+                  null
+              }
             }
           }
+        } finally {
+          setConversation(prev => [...prev, { role: "assistant", message: text, date: getNow() }])
+          setBotChat("")
+          reader.releaseLock()
         }
-      } finally {
-        reader.releaseLock()
       }
-    }
+    })
   }
 
   return (
     <div className="h-screen flex flex-col gap-4">
       <header className="p-4 grid place-items-center">
         <h1 className="text-2xl font-semibold">Chat</h1>
-        <div className=" bg-green-300" onClick={() => onButtonClick(prompt)}>ボタン</div>
       </header>
       <main className="flex-1 flex flex-col p-4">
         <div className="grid gap-4">

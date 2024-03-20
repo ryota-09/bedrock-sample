@@ -16,16 +16,66 @@ export default function Home() {
     const _prompt = e.target[0].value
     setUserChat(_prompt)
     setPrompt("")
+
     startTransition(async () => {
-      await postMessageWithStream(_prompt, (completion, stopReason) => {
-        setBotChat(prev => prev + completion)
-        if (stopReason === "max_tokens") {
-          setStopReason(stopReason)
-          return
-        }
+      const response = await fetch(`/api/chat`, {
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": JSON.stringify({ "prompt": _prompt })
       })
-      window.history.pushState(null, "", `/chat/${createChatRoomId()}}`)
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+      let text = ""
+      if (response.body) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+
+            if (done) {
+              break
+            }
+
+            if (value) {
+              const chunk = JSON.parse(decoder.decode(value, { stream: true }))
+              const chunk_type = chunk.type;
+              switch (chunk_type) {
+                // case "message_start":
+                //   console.log(chunk);
+                //   console.log(chunk["message"]["id"]);
+                //   console.log(chunk["message"]["model"]);
+                //   break;
+                case "content_block_delta":
+                  const currentText = chunk["delta"]["text"]
+                  text = text + currentText
+                  setBotChat(prev => prev + currentText)
+                  if (chunk["delta"]["stop_reason"] === "max_tokens") {
+                    setStopReason("max_tokens")
+                    return
+                  }
+                  break;
+                // case "message_delta":
+                //   if (chunk["delta"]["stop_reason"] === "end_turn") {
+                //     return
+                //   }
+                //   break;
+                case "message_stop":
+                  // const metrics = chunk["amazon-bedrock-invocationMetrics"];
+                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+                  break;
+                default:
+                  null
+              }
+            }
+          }
+        } finally {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+          window.history.pushState(null, "", `/chat/${createChatRoomId()}}`)
+          reader.releaseLock()
+        }
+      }
     })
   }
 
@@ -33,7 +83,7 @@ export default function Home() {
     e.preventDefault()
     startTransition(async () => {
       await postMessageWithMaxLength({ userChat: userChat, botChat: botChat }, (completion, stopReason) => {
-        if(completion) {
+        if (completion) {
           setBotChat(prev => prev + completion)
         }
         if (stopReason === "max_tokens") {
