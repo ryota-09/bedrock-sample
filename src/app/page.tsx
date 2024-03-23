@@ -91,9 +91,13 @@ export default function Page() {
                 
                 const jsonList = formatedParts.map(part => JSON.parse(part));
                 for (const obj of jsonList) {
+                  console.log("条件１");
+                  console.log(obj);
                   chunkSwitcher(obj);
                 }
               } else {
+                console.log("条件２");
+                console.log(JSON.parse(str));
                 chunkSwitcher(JSON.parse(str));
               }
             }
