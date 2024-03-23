@@ -18,6 +18,7 @@ export default function Page() {
 
   const onSend = async (data: ChatMessageType) => {
     setConversation(prev => [...prev, { chatId: createChatId(), role: "user", message: data.content, date: getNow() }])
+    setValue("content", "")
     startTransition(async () => {
       const response = await fetch(`/api/chat`, {
         "method": "POST",
@@ -42,7 +43,7 @@ export default function Page() {
 
             if (value) {
               const str = decoder.decode(value, { stream: true })
-
+              console.log(str)
               const chunkSwitcher = (chunk: any) => {
                 const chunkType = chunk.type;
                 switch (chunkType) {
@@ -91,7 +92,7 @@ export default function Page() {
                 
                 const jsonList = formatedParts.map(part => JSON.parse(part));
                 for (const obj of jsonList) {
-                  console.log("条件１");
+                  console.log("@@@ 条件１");
                   console.log(obj);
                   chunkSwitcher(obj);
                 }
@@ -104,7 +105,6 @@ export default function Page() {
           }
         } finally {
           setConversation(prev => [...prev, { chatId: createChatId(), role: "assistant", message: text, date: getNow() }])
-          setValue("content", "")
           setBotChat("")
           window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
           window.history.pushState(null, "", `/chat/${data.id}}`)

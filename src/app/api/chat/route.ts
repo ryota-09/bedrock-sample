@@ -1,6 +1,6 @@
 import { postMessageWithRiouteHandler } from "@/lib/bedrock"
 
-// export const runtime = 'edge'
+export const runtime = 'edge'
 
 export async function POST(request: Request) {
   const data = await request.json()
