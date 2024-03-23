@@ -2,20 +2,22 @@
 
 import { ChatMessageType } from "@/domains/form"
 import { postMessageWithMaxLength, postMessageWithStream } from "@/lib/bedrock"
-import { createChatRoomId, getNow } from "@/utils"
+import { ChatType } from "@/types/chat"
+import { createChatId, createChatRoomId, getNow } from "@/utils"
 import { useState, useTransition } from "react"
 import { useFormContext } from "react-hook-form"
 
-export default function Home() {
+export default function Page() {
   const [isPending, startTransition] = useTransition()
   const { handleSubmit, register, setValue } = useFormContext<ChatMessageType>();
+
+  const [conversation, setConversation] = useState<ChatType[]>([])
   const [userChat, setUserChat] = useState("")
   const [botChat, setBotChat] = useState("")
   const [stopReason, setStopReason] = useState("")
 
   const onSend = async (data: ChatMessageType) => {
-    setUserChat(data.content)
-    setValue("content", "")
+    setConversation(prev => [...prev, { chatId: createChatId(), role: "user", message: data.content, date: getNow() }])
     startTransition(async () => {
       const response = await fetch(`/api/chat`, {
         "method": "POST",
@@ -24,6 +26,7 @@ export default function Home() {
         },
         "body": JSON.stringify({ "prompt": data.content })
       })
+      console.log(response)
       let text = ""
       if (response.body) {
         const reader = response.body.getReader()
@@ -38,39 +41,67 @@ export default function Home() {
             }
 
             if (value) {
-              console.log(decoder.decode(value, { stream: true }))
-              const chunk = JSON.parse(decoder.decode(value, { stream: true }))
-              const chunk_type = chunk.type;
-              switch (chunk_type) {
-                case "message_start":
-                  console.log(chunk);
-                  console.log(chunk["message"]["id"]);
-                  console.log(chunk["message"]["model"]);
-                  break;
-                case "content_block_delta":
-                  const currentText = chunk["delta"]["text"]
-                  text = text + currentText
-                  setBotChat(prev => prev + currentText)
-                  if (chunk["delta"]["stop_reason"] === "max_tokens") {
-                    setStopReason("max_tokens")
-                    return
+              const str = decoder.decode(value)
+
+              const chunkSwitcher = (chunk: any) => {
+                const chunkType = chunk.type;
+                switch (chunkType) {
+                  case "message_start":
+                    console.log(chunk);
+                    console.log(chunk.message.id);
+                    console.log(chunk.message.model);
+                    break;
+                  case "content_block_delta":
+                    const currentText = chunk.delta.text;
+                    text += currentText;
+                    setBotChat((prev: string) => prev + currentText);
+                    if (chunk.delta.stop_reason === "max_tokens") {
+                      setStopReason("max_tokens");
+                      return;
+                    }
+                    break;
+                  case "message_delta":
+                    if (chunk.delta.stop_reason === "end_turn") {
+                      return;
+                    }
+                    break;
+                  case "message_stop":
+                    const metrics = chunk["amazon-bedrock-invocationMetrics"];
+                    console.log(metrics);
+                    break;
+                  default:
+                    // Handle default case or do nothing
+                    break;
+                }
+              };
+
+              if (str.includes("}{")) {
+                const formatedParts = str.split('}{').map((part, index, array) => {
+                  if (index === 0) {
+                    // 最初の要素の場合、末尾に'}'を追加
+                    return `${part}}`;
+                  } else if (index === array.length - 1) {
+                    // 最後の要素の場合、先頭に'{'を追加
+                    return `{${part}`;
+                  } else {
+                    // それ以外の要素の場合、先頭と末尾にそれぞれ'{'と'}'を追加
+                    return `{${part}}`;
                   }
-                  break;
-                case "message_delta":
-                  if (chunk["delta"]["stop_reason"] === "end_turn") {
-                    return
-                  }
-                  break;
-                case "message_stop":
-                  const metrics = chunk["amazon-bedrock-invocationMetrics"];
-                  console.log(metrics);
-                  break;
-                default:
-                  null
+                });
+                
+                const jsonObjects = formatedParts.map(part => JSON.parse(part));
+                for (const obj of jsonObjects) {
+                  chunkSwitcher(obj);
+                }
+              } else {
+                chunkSwitcher(JSON.parse(str));
               }
             }
           }
         } finally {
+          setConversation(prev => [...prev, { chatId: createChatId(), role: "assistant", message: text, date: getNow() }])
+          setValue("content", "")
+          setBotChat("")
           window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
           window.history.pushState(null, "", `/chat/${data.id}}`)
           reader.releaseLock()
@@ -101,17 +132,28 @@ export default function Home() {
       </header>
       <main className="flex-1 flex flex-col p-4">
         <div className="grid gap-4">
-          {userChat &&
-            <div className="flex flex-col items-end gap-1">
-              <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="font-medium bg-slate-500 text-white px-2 py-1 rounded-full">You</div>
-                  <time className="opacity-70">{getNow()}</time>
+          {conversation.map((chat, index) => (
+            chat.role === "user" ?
+              <div key={index} className="flex flex-col items-end gap-1">
+                <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="font-medium bg-slate-500 text-white px-2 py-1 rounded-full">You</div>
+                    <time className="opacity-70">{chat.date}</time>
+                  </div>
+                  <div className="mt-2">{chat.message}</div>
                 </div>
-                <div className="mt-2">{userChat}</div>
               </div>
-            </div>
-          }
+              :
+              <div className="flex flex-col items-start gap-1" key={index}>
+                <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="font-medium bg-green-600 text-white px-2 py-1 rounded-full">Bed Rock</div>
+                    <time className="opacity-70">{chat.date}</time>
+                  </div>
+                  <div className="mt-2 whitespace-pre-wrap">{chat.message}</div>
+                </div>
+              </div>
+          ))}
           {botChat &&
             <div className="flex flex-col items-start gap-1">
               <div className="flex flex-col max-w-[75%] rounded-lg p-4 bg-gray-100">

@@ -17,3 +17,7 @@ export const createChatRoomId = () => {
   const date = `${year}${month < 10 ? `0${month}` : month}${day < 10 ? `0${day}` : day}`
   return `chat-${date}-${uuid()}`
 }
+
+export const createChatId = () => {
+  return `chat-${uuid()}`
+}
