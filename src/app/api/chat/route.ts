@@ -1,6 +1,6 @@
 import { postMessageWithRiouteHandler } from "@/lib/bedrock"
 
-export const runtime = 'edge'
+// export const runtime = 'edge'
 
 export async function POST(request: Request) {
   const data = await request.json()
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       }
     }
   })
-  return new Response(readableStream, { headers: { "Content-Type": "text/event-stream" }})
+  return new Response(readableStream, { headers: { "Content-Type": "text/plain" }})
 }
 
 export async function GET() {
