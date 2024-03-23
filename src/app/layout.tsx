@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import "./globals.css"
+import { ClientFormProvider } from '@/providers/FormProvider'
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -13,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" className='max-w-[768px] mx-auto'>
-      <body>{children}</body>
+      <body>
+        <ClientFormProvider>
+          {children}
+        </ClientFormProvider>
+      </body>
     </html>
   )
 }

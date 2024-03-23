@@ -1,29 +1,28 @@
 "use client"
 
+import { ChatMessageType } from "@/domains/form"
 import { postMessageWithMaxLength, postMessageWithStream } from "@/lib/bedrock"
 import { createChatRoomId, getNow } from "@/utils"
 import { useState, useTransition } from "react"
+import { useFormContext } from "react-hook-form"
 
 export default function Home() {
   const [isPending, startTransition] = useTransition()
-  const [prompt, setPrompt] = useState("")
+  const { handleSubmit, register, setValue } = useFormContext<ChatMessageType>();
   const [userChat, setUserChat] = useState("")
   const [botChat, setBotChat] = useState("")
   const [stopReason, setStopReason] = useState("")
 
-  const onSend = async (e: any) => {
-    e.preventDefault()
-    const _prompt = e.target[0].value
-    setUserChat(_prompt)
-    setPrompt("")
-
+  const onSend = async (data: ChatMessageType) => {
+    setUserChat(data.content)
+    setValue("content", "")
     startTransition(async () => {
       const response = await fetch(`/api/chat`, {
         "method": "POST",
         "headers": {
           "Content-Type": "application/json"
         },
-        "body": JSON.stringify({ "prompt": _prompt })
+        "body": JSON.stringify({ "prompt": data.content })
       })
       let text = ""
       if (response.body) {
@@ -73,7 +72,7 @@ export default function Home() {
           }
         } finally {
           window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-          window.history.pushState(null, "", `/chat/${createChatRoomId()}}`)
+          window.history.pushState(null, "", `/chat/${data.id}}`)
           reader.releaseLock()
         }
       }
@@ -136,13 +135,16 @@ export default function Home() {
       </main>
       {stopReason === "max_tokens" && <button className="mx-auto hover:bg-orange-100 p-4 text-center border border-orange-300 text-orange-600 rounded-md" onClick={onSendWithMaxLength}>Continue</button>}
       <div className="border-t p-4">
-        <form className="flex gap-4" onSubmit={onSend}>
+        <form className="flex gap-4" onSubmit={handleSubmit(onSend)}>
           <input
             placeholder="Type a message"
             className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring focus:ring-gray-400"
             type="text"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            {...register("content")}
+            onBlur={() => {
+              const id = createChatRoomId();
+              register("id", { value: id });
+            }}
           />
           <button type="submit" className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors">Send</button>
         </form>
