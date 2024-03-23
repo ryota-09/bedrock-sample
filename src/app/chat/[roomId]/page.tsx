@@ -69,10 +69,7 @@ export default function Page() {
             }
 
             if (value) {
-              let chunk
-              console.log("@@@@@@@@@@")
-              console.log(decoder.decode(value, { stream: true }).replaceAll(/}\s*{/g, '},{'))
-              chunk = JSON.parse(decoder.decode(value, { stream: true }).replaceAll(/}\s*{/g, '},{'))
+              const chunk = JSON.parse(decoder.decode(value, { stream: true }))
               const chunk_type = chunk.type;
               switch (chunk_type) {
                 // case "message_start":
