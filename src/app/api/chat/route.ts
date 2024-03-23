@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       }
     }
   })
-  return new Response(readableStream, { headers: { "Content-Type": "text/plain" }})
+  return new Response(readableStream, { headers: { "Content-Type": "text/event-stream" }})
 }
 
 export async function GET() {
