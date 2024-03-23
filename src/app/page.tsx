@@ -41,7 +41,7 @@ export default function Page() {
             }
 
             if (value) {
-              const str = decoder.decode(value)
+              const str = decoder.decode(value, { stream: true })
 
               const chunkSwitcher = (chunk: any) => {
                 const chunkType = chunk.type;
@@ -89,8 +89,8 @@ export default function Page() {
                   }
                 });
                 
-                const jsonObjects = formatedParts.map(part => JSON.parse(part));
-                for (const obj of jsonObjects) {
+                const jsonList = formatedParts.map(part => JSON.parse(part));
+                for (const obj of jsonList) {
                   chunkSwitcher(obj);
                 }
               } else {
