@@ -61,6 +61,104 @@ export default function Page() {
                       return;
                     }
                     break;
+                  case "message_stop":
+                    const metrics = chunk["amazon-bedrock-invocationMetrics"];
+                    console.log(metrics);
+                    break;
+                  case "message_delta":
+                    if (chunk["delta"]["stop_reason"] === "max_tokens") {
+                      console.log("@@@@@@@@@@@@@@@");
+                      setStopReason("max_tokens")
+                    }
+                    break;
+                  default:
+                    // Handle default case or do nothing
+                    break;
+                }
+              };
+
+              if (str.includes("}{")) {
+                const formatedParts = str.split('}{').map((part, index, array) => {
+                  if (index === 0) {
+                    // 最初の要素の場合、末尾に'}'を追加
+                    return `${part}}`;
+                  } else if (index === array.length - 1) {
+                    // 最後の要素の場合、先頭に'{'を追加
+                    return `{${part}`;
+                  } else {
+                    // それ以外の要素の場合、先頭と末尾にそれぞれ'{'と'}'を追加
+                    return `{${part}}`;
+                  }
+                });
+
+                const jsonList = formatedParts.map(part => JSON.parse(part));
+                for (const obj of jsonList) {
+                  console.log("@@@ 条件１");
+                  console.log(obj);
+                  chunkSwitcher(obj);
+                }
+              } else {
+                console.log("条件２");
+                console.log(JSON.parse(str));
+                chunkSwitcher(JSON.parse(str));
+              }
+            }
+          }
+        } finally {
+          setConversation(prev => [...prev, { chatId: data.id, role: "assistant", message: text, date: getNow() }])
+          setBotChat("")
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+          // window.history.pushState(null, "", `/chat/${data.id}}`)
+          reader.releaseLock()
+        }
+      }
+    })
+  }
+
+  const onSendWithMaxLength = async (e: any) => {
+    e.preventDefault()
+    startTransition(async () => {
+      const response = await fetch(`/api/chat`, {
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": JSON.stringify({ "prompt": conversation[conversation.length - 1].message, "botChat": botChat })
+      })
+      console.log(response)
+      let text = ""
+      if (response.body) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+
+            if (done) {
+              break
+            }
+
+            if (value) {
+              const str = decoder.decode(value, { stream: true })
+              console.log(str)
+              const chunkSwitcher = (chunk: any) => {
+                const chunkType = chunk.type;
+                switch (chunkType) {
+                  case "message_start":
+                    console.log(chunk);
+                    console.log(chunk.message.id);
+                    console.log(chunk.message.model);
+                    break;
+                  case "content_block_delta":
+                    const currentText = chunk.delta.text;
+                    text += currentText;
+                    setBotChat((prev: string) => prev + currentText);
+                    if (chunk.delta.stop_reason === "max_tokens") {
+                      setStopReason("max_tokens");
+                      return;
+                    }
+                    break;
                   case "message_delta":
                     if (chunk.delta.stop_reason === "end_turn") {
                       return;
@@ -89,7 +187,7 @@ export default function Page() {
                     return `{${part}}`;
                   }
                 });
-                
+
                 const jsonList = formatedParts.map(part => JSON.parse(part));
                 for (const obj of jsonList) {
                   console.log("@@@ 条件１");
@@ -107,25 +205,10 @@ export default function Page() {
           setConversation(prev => [...prev, { chatId: createChatId(), role: "assistant", message: text, date: getNow() }])
           setBotChat("")
           window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-          window.history.pushState(null, "", `/chat/${data.id}}`)
+          // window.history.pushState(null, "", `/chat/${conversation[conversation.length - 1].chatId}}`)
           reader.releaseLock()
         }
       }
-    })
-  }
-
-  const onSendWithMaxLength = async (e: any) => {
-    e.preventDefault()
-    startTransition(async () => {
-      await postMessageWithMaxLength({ userChat: userChat, botChat: botChat }, (completion, stopReason) => {
-        if (completion) {
-          setBotChat(prev => prev + completion)
-        }
-        if (stopReason === "max_tokens") {
-          setStopReason(stopReason)
-          return
-        }
-      })
     })
   }
 

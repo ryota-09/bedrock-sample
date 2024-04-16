@@ -1,13 +1,15 @@
-import { postMessageWithRiouteHandler } from "@/lib/bedrock"
+import { postMessageWithMaxLength, postMessageWithRiouteHandler } from "@/lib/bedrock"
 
 export const runtime = 'edge'
 
 export async function POST(request: Request) {
   const data = await request.json()
-  const decorder = new TextDecoder()
+  const isFirstChat = !Boolean(data.botChat)
+  console.log(data)
+  console.log(isFirstChat)
   const readableStream = new ReadableStream({
     async start(controller) {
-      const response = await postMessageWithRiouteHandler(data.prompt)
+      const response = isFirstChat ? await postMessageWithRiouteHandler(data.prompt) : await postMessageWithMaxLength({ userChat: data.prompt, botChat: data.botChat })
       if (response.body) {
         for await (const stream of response.body) {
           controller.enqueue(stream.chunk?.bytes)
@@ -16,7 +18,7 @@ export async function POST(request: Request) {
       }
     }
   })
-  return new Response(readableStream, { headers: { "Content-Type": "text/plain" }})
+  return new Response(readableStream, { headers: { "Content-Type": "text/plain" } })
 }
 
 export async function GET() {
